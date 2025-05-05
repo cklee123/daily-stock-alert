@@ -5,17 +5,16 @@
 import requests
 import pandas as pd
 from datetime import datetime, timedelta
+from pytz import timezone
+import os
 
-# === TOKEN 設定 ===
 API_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNS0wNS0wNCAwMToxMjoxMCIsInVzZXJfaWQiOiJjaGVuZ2thbmdsZWUiLCJpcCI6IjM5LjE0LjE3Ljg2In0.4Gc1eRyLwQrvRcDvlZRKCbNe-ZBrWhl3VrWgRmFU2_k'
 BOT_TOKEN = '7223378639:AAHTpIAhz1TSlV_aKpITjlOq897aruvgwSc'
 CHAT_ID = '7659097536'
-
-# 股票清單
 stocks = {
     '0050': '元大台灣50',
     '00965': '元大全球航太與防衛科技',
-    '9908': '大台北',
+    '1810': '和成',
     '2547': '日勝生'
 }
 
@@ -25,27 +24,17 @@ def send_telegram(message):
     requests.post(url, data=data)
 
 def arrow(today, yesterday):
-    if pd.isna(today) or pd.isna(yesterday):
-        return "→"
-    if today > yesterday:
-        return "↑"
-    elif today < yesterday:
-        return "↓"
-    else:
-        return "→"
+    if pd.isna(today) or pd.isna(yesterday): return "→"
+    return "↑" if today > yesterday else "↓" if today < yesterday else "→"
 
 def bias_str(close, ma):
-    if pd.isna(ma) or ma == 0:
-        return "NA"
-    bias = (close - ma) / ma * 100
-    return f"{bias:+.2f}%"
+    if pd.isna(ma) or ma == 0: return "NA"
+    return f"{(close - ma) / ma * 100:+.2f}%"
 
 def get_price_position(close, ma_dict):
-    levels = list(ma_dict.items())
-    levels.append(("價格", close))
+    levels = list(ma_dict.items()) + [("價格", close)]
     sorted_lv = sorted(levels, key=lambda x: -x[1])
     index = [label for label, _ in sorted_lv].index("價格")
-
     if index == 0:
         return f"高於所有均線（>{sorted_lv[1][0]}）"
     elif index == len(sorted_lv) - 1:
@@ -64,19 +53,14 @@ def get_ma_info(stock_id, name):
         'token': API_TOKEN
     }
     r = requests.get(url, params=params)
-    if r.status_code != 200:
-        return f"{name}（{stock_id}）取得失敗，HTTP錯誤碼：{r.status_code}"
-
+    if r.status_code != 200: return f"{name}（{stock_id}）取得失敗，HTTP錯誤碼：{r.status_code}"
     data = r.json()
-    if not data.get("data"):
-        return f"{name}（{stock_id}）沒有資料"
-
+    if not data.get("data"): return f"{name}（{stock_id}）沒有資料"
     df = pd.DataFrame(data["data"])
     df['date'] = pd.to_datetime(df['date'])
     df.set_index('date', inplace=True)
-    df = df.sort_index()
+    df.sort_index(inplace=True)
 
-    # 技術指標計算
     df['MA5'] = df['close'].rolling(window=5).mean()
     df['MA10'] = df['close'].rolling(window=10).mean()
     df['MA20'] = df['close'].rolling(window=20).mean()
@@ -87,11 +71,8 @@ def get_ma_info(stock_id, name):
     df['MACD'] = df['DIF'].ewm(span=3, adjust=False).mean()
     df['OSC'] = df['DIF'] - df['MACD']
 
-    latest = df.iloc[-1]
-    prev = df.iloc[-2]
+    latest, prev = df.iloc[-1], df.iloc[-2]
     close = latest['close']
-
-    # MA 字典與排序
     ma_dict = {
         "MA5": latest['MA5'],
         "MA10": latest['MA10'],
@@ -104,12 +85,10 @@ def get_ma_info(stock_id, name):
         prev_val = prev[label]
         ma_lines.append(f"  {label}：{val:.2f} {arrow(val, prev_val)}（乖離率：{bias_str(close, val)}）")
 
-    # MACD 指標
     dif = f"{latest['DIF']:.2f} {arrow(latest['DIF'], prev['DIF'])}"
     macd = f"{latest['MACD']:.2f} {arrow(latest['MACD'], prev['MACD'])}"
     osc = f"{latest['OSC']:+.2f} {arrow(latest['OSC'], prev['OSC'])}"
 
-    # 價格位置 + 均線排列
     level = get_price_position(close, ma_dict)
     sorted_order = [label for label, _ in sorted(ma_dict.items(), key=lambda x: -x[1])]
     if sorted_order == ["MA5", "MA10", "MA20", "MA60"]:
@@ -119,7 +98,7 @@ def get_ma_info(stock_id, name):
     else:
         trend = "混合排列（" + " > ".join(sorted_order) + "）"
 
-    msg = (
+    return (
         f"{name}（{stock_id}）技術指標：\n"
         f"  收盤價：{close:.2f}\n"
         + "\n".join(ma_lines) + "\n"
@@ -130,13 +109,13 @@ def get_ma_info(stock_id, name):
         + f"    MACD：{macd}\n"
         + f"    OSC：{osc}"
     )
-    return msg
 
-# 執行主程式
-messages = []
-for stock_id, name in stocks.items():
-    result = get_ma_info(stock_id, name)
-    messages.append(result)
+# 加上當地時間
+now = datetime.now(timezone('Asia/Taipei')).strftime("📅 %Y-%m-%d %H:%M (Asia/Taipei)")
 
+# 結果彙整
+messages = [get_ma_info(sid, name) for sid, name in stocks.items()]
+messages.insert(0, now)
 send_telegram('\n\n'.join(messages))
+
 
