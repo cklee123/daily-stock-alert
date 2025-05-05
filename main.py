@@ -4,6 +4,7 @@
 
 import requests
 import pandas as pd
+import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from pytz import timezone
 import os
