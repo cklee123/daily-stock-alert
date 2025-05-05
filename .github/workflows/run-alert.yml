@@ -2,8 +2,9 @@ name: Daily Stock Alert
 
 on:
   schedule:
-    - cron: '0 4 * * *'  # 每天中午12點（UTC + 8）
-  workflow_dispatch:      # 可手動觸發
+    - cron: '30 7 * * *'  # 每天下午 3:30 台灣時間（GitHub 使用 UTC）
+  workflow_dispatch:
+
 
 jobs:
   run-script:
