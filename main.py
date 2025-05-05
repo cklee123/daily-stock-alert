@@ -13,6 +13,9 @@ API_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNS0wNS0wNCAwMT
 BOT_TOKEN = '7223378639:AAHTpIAhz1TSlV_aKpITjlOq897aruvgwSc'
 CHAT_ID = '7659097536'
 
+plt.rcParams['font.sans-serif'] = ['Noto Sans CJK JP']
+plt.rcParams['axes.unicode_minus'] = False
+
 
 stocks = {
     '0050': '元大台灣50',
@@ -32,7 +35,6 @@ def send_telegram_photo(image_path):
         files = {'photo': photo}
         data = {'chat_id': CHAT_ID}
         requests.post(url, files=files, data=data)
-
 
 def arrow(today, yesterday):
     if pd.isna(today) or pd.isna(yesterday): return "→"
@@ -65,7 +67,8 @@ def plot_chart(df, stock_id, name):
     ax1.grid(True)
 
     ax2 = plt.subplot(2, 1, 2)
-    ax2.bar(df.index, df['OSC'], label='OSC', color='gray')
+    colors = ['red' if val >= 0 else 'green' for val in df['OSC']]
+    ax2.bar(df.index, df['OSC'], color=colors, label='OSC')
     df[['DIF', 'MACD']].plot(ax=ax2)
     ax2.set_title('MACD 指標')
     ax2.set_ylabel('')
@@ -77,7 +80,6 @@ def plot_chart(df, stock_id, name):
     plt.close()
     send_telegram_photo(image_path)
     os.remove(image_path)
-
 
 def get_ma_info(stock_id, name):
     url = 'https://api.finmindtrade.com/api/v4/data'
@@ -99,7 +101,6 @@ def get_ma_info(stock_id, name):
     df.set_index('date', inplace=True)
     df.sort_index(inplace=True)
 
-    # 資料更新檢查
     taipei_today = datetime.now(timezone('Asia/Taipei')).date()
     last_data_date = df.index[-1].date()
     if last_data_date < taipei_today:
@@ -145,20 +146,29 @@ def get_ma_info(stock_id, name):
         trend = "混合排列（" + " > ".join(sorted_order) + "）"
 
     return (
-        f"{name}（{stock_id}）技術指標：\\n"
-        f"  收盤價：{close:.2f}\\n"
-        + "\\n".join(ma_lines) + "\\n"
-        + f"  ➤ 價格位置：{level}\\n"
-        + f"  ➤ 均線排列：{trend}\\n"
-        + f"  ➤ MACD 指標：\\n"
-        + f"    DIF：{dif}\\n"
-        + f"    MACD：{macd}\\n"
+        f"📌 {name}（{stock_id}）
+"
+        f"收盤價：{close:.2f}
+"
+        + "
+".join(ma_lines) + "
+"
+        + f"🔹 價格位置：{level}
+"
+        + f"🔹 均線排列：{trend}
+"
+        + f"🔹 MACD 指標：
+"
+        + f"    DIF：{dif}
+"
+        + f"    MACD：{macd}
+"
         + f"    OSC：{osc}"
     )
 
-# === 主程式執行區 ===
 now = datetime.now(timezone('Asia/Taipei')).strftime("📅 %Y-%m-%d %H:%M (Asia/Taipei)")
 messages = [get_ma_info(sid, name) for sid, name in stocks.items()]
 messages.insert(0, now)
-send_telegram_message('\\n\\n'.join(messages))
+send_telegram_message('\n\n'.join(messages))
+
 
