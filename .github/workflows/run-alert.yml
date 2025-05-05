@@ -2,7 +2,8 @@ name: Daily Stock Alert
 
 on:
   schedule:
-    - cron: '30 7 * * *'  # 台灣時間 15:30
+    - cron: '30 7 * * *'  # 台灣時間 15:30（UTC+8 → UTC 07:30）
+    - cron: '0 9 * * *'   # 台灣時間 17:00（UTC+8 → UTC 09:00）
   workflow_dispatch:
 
 jobs:
