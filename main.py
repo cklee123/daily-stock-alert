@@ -11,6 +11,7 @@ import os
 API_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNS0wNS0wNCAwMToxMjoxMCIsInVzZXJfaWQiOiJjaGVuZ2thbmdsZWUiLCJpcCI6IjM5LjE0LjE3Ljg2In0.4Gc1eRyLwQrvRcDvlZRKCbNe-ZBrWhl3VrWgRmFU2_k'
 BOT_TOKEN = '7223378639:AAHTpIAhz1TSlV_aKpITjlOq897aruvgwSc'
 CHAT_ID = '7659097536'
+
 stocks = {
     '0050': '元大台灣50',
     '00965': '元大全球航太與防衛科技',
@@ -53,13 +54,22 @@ def get_ma_info(stock_id, name):
         'token': API_TOKEN
     }
     r = requests.get(url, params=params)
-    if r.status_code != 200: return f"{name}（{stock_id}）取得失敗，HTTP錯誤碼：{r.status_code}"
+    if r.status_code != 200:
+        return f"{name}（{stock_id}）取得失敗，HTTP錯誤碼：{r.status_code}"
     data = r.json()
-    if not data.get("data"): return f"{name}（{stock_id}）沒有資料"
+    if not data.get("data"):
+        return f"{name}（{stock_id}）沒有資料"
+
     df = pd.DataFrame(data["data"])
     df['date'] = pd.to_datetime(df['date'])
     df.set_index('date', inplace=True)
     df.sort_index(inplace=True)
+
+    # 資料更新檢查
+    taipei_today = datetime.now(timezone('Asia/Taipei')).date()
+    last_data_date = df.index[-1].date()
+    if last_data_date < taipei_today:
+        return f"⚠️【{name}】資料尚未更新到今天（最新日期：{last_data_date}）"
 
     df['MA5'] = df['close'].rolling(window=5).mean()
     df['MA10'] = df['close'].rolling(window=10).mean()
@@ -110,12 +120,13 @@ def get_ma_info(stock_id, name):
         + f"    OSC：{osc}"
     )
 
-# 加上當地時間
+# 時間標記
 now = datetime.now(timezone('Asia/Taipei')).strftime("📅 %Y-%m-%d %H:%M (Asia/Taipei)")
 
-# 結果彙整
+# 分析與通知
 messages = [get_ma_info(sid, name) for sid, name in stocks.items()]
 messages.insert(0, now)
 send_telegram('\n\n'.join(messages))
+
 
 
