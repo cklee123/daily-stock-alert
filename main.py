@@ -16,6 +16,7 @@ plt.rcParams['axes.unicode_minus'] = False
 API_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNS0wNS0wNCAwMToxMjoxMCIsInVzZXJfaWQiOiJjaGVuZ2thbmdsZWUiLCJpcCI6IjM5LjE0LjE3Ljg2In0.4Gc1eRyLwQrvRcDvlZRKCbNe-ZBrWhl3VrWgRmFU2_k'
 BOT_TOKEN = '7223378639:AAHTpIAhz1TSlV_aKpITjlOq897aruvgwSc'
 CHAT_ID = '7659097536'
+
 stocks = {
     '0050': '元大台灣50',
     '00965': '元大全球航太與防衛科技',
@@ -58,7 +59,6 @@ def get_price_position(close, ma_dict):
 
 def plot_chart(df, stock_id, name):
     plt.figure(figsize=(10, 6))
-
     ax1 = plt.subplot(2, 1, 1)
     df[['close', 'MA5', 'MA10', 'MA20', 'MA60']].plot(ax=ax1)
     ax1.set_title(f'{name} ({stock_id}) 收盤與均線')
@@ -145,30 +145,22 @@ def get_ma_info(stock_id, name):
         trend = "混合排列（" + " > ".join(sorted_order) + "）"
 
     return (
-        f"📌 {name}（{stock_id}）
-"
-        f"收盤價：{close:.2f}
-"
-        + "
-".join(ma_lines) + "
-"
-        + f"🔹 價格位置：{level}
-"
-        + f"🔹 均線排列：{trend}
-"
-        + f"🔹 MACD 指標：
-"
-        + f"    DIF：{dif}
-"
-        + f"    MACD：{macd}
-"
+        f"📌 {name}（{stock_id}）\n"
+        f"收盤價：{close:.2f}\n"
+        + "\n".join(ma_lines) + "\n"
+        + f"🔹 價格位置：{level}\n"
+        + f"🔹 均線排列：{trend}\n"
+        + f"🔹 MACD 指標：\n"
+        + f"    DIF：{dif}\n"
+        + f"    MACD：{macd}\n"
         + f"    OSC：{osc}"
     )
 
 now = datetime.now(timezone('Asia/Taipei')).strftime("📅 %Y-%m-%d %H:%M (Asia/Taipei)")
 messages = [get_ma_info(sid, name) for sid, name in stocks.items()]
 messages.insert(0, now)
-send_telegram_message('\n\n'.join(messages))
+send_telegram_message("\n\n".join(messages))
+
 
 
 
