@@ -12,6 +12,7 @@ API_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNS0wNS0wNCAwMT
 BOT_TOKEN = '7223378639:AAHTpIAhz1TSlV_aKpITjlOq897aruvgwSc'
 CHAT_ID = '7659097536'
 
+
 stocks = {
     '0050': '元大台灣50',
     '00965': '元大全球航太與防衛科技',
@@ -19,10 +20,18 @@ stocks = {
     '2547': '日勝生'
 }
 
-def send_telegram(message):
+def send_telegram_message(message):
     url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
     data = {'chat_id': CHAT_ID, 'text': message}
     requests.post(url, data=data)
+
+def send_telegram_photo(image_path):
+    url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto'
+    with open(image_path, 'rb') as photo:
+        files = {'photo': photo}
+        data = {'chat_id': CHAT_ID}
+        requests.post(url, files=files, data=data)
+
 
 def arrow(today, yesterday):
     if pd.isna(today) or pd.isna(yesterday): return "→"
@@ -44,6 +53,30 @@ def get_price_position(close, ma_dict):
         upper = sorted_lv[index - 1][0]
         lower = sorted_lv[index + 1][0]
         return f"介於 {upper} 和 {lower} 之間"
+
+def plot_chart(df, stock_id, name):
+    plt.figure(figsize=(10, 6))
+
+    ax1 = plt.subplot(2, 1, 1)
+    df[['close', 'MA5', 'MA10', 'MA20', 'MA60']].plot(ax=ax1)
+    ax1.set_title(f'{name} ({stock_id}) 收盤與均線')
+    ax1.set_ylabel('價格')
+    ax1.grid(True)
+
+    ax2 = plt.subplot(2, 1, 2)
+    ax2.bar(df.index, df['OSC'], label='OSC', color='gray')
+    df[['DIF', 'MACD']].plot(ax=ax2)
+    ax2.set_title('MACD 指標')
+    ax2.set_ylabel('')
+    ax2.grid(True)
+
+    plt.tight_layout()
+    image_path = f'{stock_id}.png'
+    plt.savefig(image_path)
+    plt.close()
+    send_telegram_photo(image_path)
+    os.remove(image_path)
+
 
 def get_ma_info(stock_id, name):
     url = 'https://api.finmindtrade.com/api/v4/data'
@@ -81,6 +114,8 @@ def get_ma_info(stock_id, name):
     df['MACD'] = df['DIF'].ewm(span=3, adjust=False).mean()
     df['OSC'] = df['DIF'] - df['MACD']
 
+    plot_chart(df[-60:], stock_id, name)
+
     latest, prev = df.iloc[-1], df.iloc[-2]
     close = latest['close']
     ma_dict = {
@@ -109,24 +144,20 @@ def get_ma_info(stock_id, name):
         trend = "混合排列（" + " > ".join(sorted_order) + "）"
 
     return (
-        f"{name}（{stock_id}）技術指標：\n"
-        f"  收盤價：{close:.2f}\n"
-        + "\n".join(ma_lines) + "\n"
-        + f"  ➤ 價格位置：{level}\n"
-        + f"  ➤ 均線排列：{trend}\n"
-        + f"  ➤ MACD 指標：\n"
-        + f"    DIF：{dif}\n"
-        + f"    MACD：{macd}\n"
+        f"{name}（{stock_id}）技術指標：\\n"
+        f"  收盤價：{close:.2f}\\n"
+        + "\\n".join(ma_lines) + "\\n"
+        + f"  ➤ 價格位置：{level}\\n"
+        + f"  ➤ 均線排列：{trend}\\n"
+        + f"  ➤ MACD 指標：\\n"
+        + f"    DIF：{dif}\\n"
+        + f"    MACD：{macd}\\n"
         + f"    OSC：{osc}"
     )
 
-# 時間標記
+# === 主程式執行區 ===
 now = datetime.now(timezone('Asia/Taipei')).strftime("📅 %Y-%m-%d %H:%M (Asia/Taipei)")
-
-# 分析與通知
 messages = [get_ma_info(sid, name) for sid, name in stocks.items()]
 messages.insert(0, now)
-send_telegram('\n\n'.join(messages))
-
-
+send_telegram_message('\\n\\n'.join(messages))
 
