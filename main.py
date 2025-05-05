@@ -2,6 +2,7 @@
 # 股票自動分析 + Telegram 通知
 # 你可以在 stocks 字典中加入要追蹤的股票代碼
 
+
 import requests
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -9,14 +10,12 @@ from datetime import datetime, timedelta
 from pytz import timezone
 import os
 
-API_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNS0wNS0wNCAwMToxMjoxMCIsInVzZXJfaWQiOiJjaGVuZ2thbmdsZWUiLCJpcCI6IjM5LjE0LjE3Ljg2In0.4Gc1eRyLwQrvRcDvlZRKCbNe-ZBrWhl3VrWgRmFU2_k'
-BOT_TOKEN = '7223378639:AAHTpIAhz1TSlV_aKpITjlOq897aruvgwSc'
-CHAT_ID = '7659097536'
-
 plt.rcParams['font.sans-serif'] = ['Noto Sans CJK JP']
 plt.rcParams['axes.unicode_minus'] = False
 
-
+API_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNS0wNS0wNCAwMToxMjoxMCIsInVzZXJfaWQiOiJjaGVuZ2thbmdsZWUiLCJpcCI6IjM5LjE0LjE3Ljg2In0.4Gc1eRyLwQrvRcDvlZRKCbNe-ZBrWhl3VrWgRmFU2_k'
+BOT_TOKEN = '7223378639:AAHTpIAhz1TSlV_aKpITjlOq897aruvgwSc'
+CHAT_ID = '7659097536'
 stocks = {
     '0050': '元大台灣50',
     '00965': '元大全球航太與防衛科技',
@@ -170,5 +169,6 @@ now = datetime.now(timezone('Asia/Taipei')).strftime("📅 %Y-%m-%d %H:%M (Asia/
 messages = [get_ma_info(sid, name) for sid, name in stocks.items()]
 messages.insert(0, now)
 send_telegram_message('\n\n'.join(messages))
+
 
 
